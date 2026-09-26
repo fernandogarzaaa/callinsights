@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} - New Call{% endblock %}
+{% block nav %}
+<a href="/" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">Dashboard</a>
+<a href="/calls/new" class="block px-3 py-2 rounded-md bg-orange-100 text-orange-800 font-medium">New Call</a>
+<a href="/settings" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">Settings</a>
+{% endblock %}
+{% block content %}
+<div class="max-w-3xl">
+  <h1 class="text-2xl font-bold tracking-tight mb-1">Add Call</h1>
+  <p class="text-sm text-stone-500 mb-6">Paste a transcript or upload a .txt / .vtt / .srt file. Optionally attach an audio recording.</p>
+
+  <div id="form-error" class="hidden mb-4 text-sm bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3"></div>
+
+  <form id="call-form" class="bg-white rounded-lg border border-stone-200 p-6 space-y-4" enctype="multipart/form-data">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-stone-600 mb-1">Contact name</label>
+        <input name="contact_name" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2" placeholder="Dana Whitfield">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-stone-600 mb-1">Contact phone</label>
+        <input name="contact_phone" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2" placeholder="+1 415 555 0132">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-stone-600 mb-1">Agent</label>
+        <input name="agent" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2" placeholder="Maya Santos">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-stone-600 mb-1">Call started</label>
+        <input name="started_at" type="datetime-local" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-stone-600 mb-1">Transcript (paste)</label>
+      <textarea name="transcript_text" rows="10" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2 font-mono" placeholder="Agent: Hi, thanks for taking the time...&#10;Prospect: Sure, I have a few minutes..."></textarea>
+      <p class="text-xs text-stone-400 mt-1">One speaker per line: <span class="font-mono">Agent:</span> / <span class="font-mono">Prospect:</span></p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-stone-600 mb-1">Or upload transcript (.txt, .vtt, .srt)</label>
+        <input name="transcript_file" type="file" accept=".txt,.vtt,.srt,.md" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-stone-600 mb-1">Audio recording (optional)</label>
+        <input name="audio_file" type="file" accept="audio/*,.mp3,.wav,.m4a,.ogg,.webm,.flac" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
+      </div>
+    </div>
+
+    <div class="pt-2 flex items-center gap-3">
+      <button type="submit" id="submit-btn" class="text-sm bg-orange-600 text-white px-5 py-2 rounded-md hover:bg-orange-700">Score Call</button>
+      <span id="form-status" class="text-sm text-stone-500"></span>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('call-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('form-error');
+  const status = document.getElementById('form-status');
+  const btn = document.getElementById('submit-btn');
+  err.classList.add('hidden');
+  btn.disabled = true;
+  status.textContent = 'Scoring...';
+  try {
+    const r = await fetch('/api/calls', { method: 'POST', body: new FormData(e.target) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Failed to score call');
+    status.textContent = 'Scored ' + data.score + '/100 (' + data.outcome + '). Opening...';
+    window.location.href = data.url;
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.classList.remove('hidden');
+    status.textContent = '';
+    btn.disabled = false;
+  }
+});
+</script>
+{% endblock %}

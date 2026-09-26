@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} - {{ call.contact_name }}{% endblock %}
+{% block extra_head %}
+{% if audio_url %}
+<script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+{% endif %}
+{% endblock %}
+{% block nav %}
+<a href="/" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">Dashboard</a>
+<a href="/calls/new" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">New Call</a>
+<a href="/settings" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">Settings</a>
+{% endblock %}
+{% block content %}
+<div class="mb-6">
+  <a href="/" class="text-xs text-stone-500 hover:text-orange-700">&larr; Back to dashboard</a>
+  <div class="flex items-start justify-between mt-2">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">{{ call.contact_name }}</h1>
+      <p class="text-sm text-stone-500">{{ call.agent }}{% if call.contact_phone %} &middot; {{ call.contact_phone }}{% endif %}{% if call.started_at %} &middot; {{ call.started_at.strftime('%Y-%m-%d %H:%M') }}{% endif %}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-2xl font-bold {% if call.score >= 75 %}text-emerald-700{% elif call.score >= 50 %}text-amber-700{% else %}text-red-700{% endif %}">{{ call.score }}<span class="text-sm text-stone-400">/100</span></span>
+      <span class="px-3 py-1 rounded-full text-xs font-semibold {% if call.outcome == 'Interested' %}bg-emerald-100 text-emerald-800{% elif call.outcome == 'Follow Up' %}bg-amber-100 text-amber-800{% else %}bg-red-100 text-red-800{% endif %}">{{ call.outcome }}</span>
+    </div>
+  </div>
+</div>
+
+{% if audio_url %}
+<div class="bg-white rounded-lg border border-stone-200 p-5 mb-6">
+  <div class="flex items-center gap-4">
+    <button id="play-btn" class="shrink-0 w-11 h-11 rounded-full bg-orange-600 text-white hover:bg-orange-700 flex items-center justify-center" aria-label="Play or pause">
+      <svg id="icon-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="icon-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <div class="flex-1">
+      <div id="waveform" class="w-full"></div>
+      <div class="text-xs text-stone-500 mt-1">{{ call.audio_filename or 'Recording' }}</div>
+    </div>
+    <audio id="audio-el" src="{{ audio_url }}" preload="metadata" class="hidden"></audio>
+  </div>
+</div>
+{% endif %}
+
+<div x-data="{ tab: 'summary' }">
+  <div class="border-b border-stone-200 mb-6 flex gap-1 text-sm">
+    <button @click="tab = 'summary'" :class="tab === 'summary' ? 'border-orange-600 text-orange-700' : 'border-transparent text-stone-500 hover:text-stone-700'" class="px-4 py-2 border-b-2 font-medium">Summary</button>
+    <button @click="tab = 'transcript'" :class="tab === 'transcript' ? 'border-orange-600 text-orange-700' : 'border-transparent text-stone-500 hover:text-stone-700'" class="px-4 py-2 border-b-2 font-medium">Transcript</button>
+    <button @click="tab = 'analytics'" :class="tab === 'analytics' ? 'border-orange-600 text-orange-700' : 'border-transparent text-stone-500 hover:text-stone-700'" class="px-4 py-2 border-b-2 font-medium">Analytics</button>
+    <button @click="tab = 'coaching'" :class="tab === 'coaching' ? 'border-orange-600 text-orange-700' : 'border-transparent text-stone-500 hover:text-stone-700'" class="px-4 py-2 border-b-2 font-medium">Coaching</button>
+  </div>
+
+  <div x-show="tab === 'summary'" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 bg-white rounded-lg border border-stone-200 p-6">
+      <h2 class="text-sm font-semibold mb-3">Call summary</h2>
+      <p class="text-sm text-stone-700 leading-relaxed">{{ call.summary or 'No summary available.' }}</p>
+    </div>
+    <div class="bg-white rounded-lg border border-stone-200 p-6">
+      <h2 class="text-sm font-semibold mb-3">Key highlights</h2>
+      <ul class="space-y-2 text-sm">
+        {% for h in highlights %}
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 font-bold {% if h.met %}text-emerald-600{% else %}text-red-500{% endif %}">{% if h.met %}&#10003;{% else %}&#10007;{% endif %}</span>
+          <span class="text-stone-700">{{ h.label }}{% if h.detail %} <span class="text-stone-400 text-xs">({{ h.detail }})</span>{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div x-show="tab === 'transcript'" class="bg-white rounded-lg border border-stone-200 p-6">
+    <h2 class="text-sm font-semibold mb-4">Transcript ({{ turns|length }} turns)</h2>
+    <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+      {% for t in turns %}
+      <div class="flex gap-3">
+        <div class="shrink-0 w-20 text-xs font-semibold pt-1 {% if t.role == 'agent' %}text-orange-700{% elif t.role == 'prospect' %}text-sky-700{% else %}text-stone-500{% endif %}">{{ t.speaker }}</div>
+        <p class="text-sm text-stone-700 leading-relaxed">{{ t.text }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div x-show="tab === 'analytics'" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-white rounded-lg border border-stone-200 p-6">
+      <h2 class="text-sm font-semibold mb-3">Score breakdown</h2>
+      <div class="h-56"><canvas id="compChart"></canvas></div>
+    </div>
+    <div class="bg-white rounded-lg border border-stone-200 p-6">
+      <h2 class="text-sm font-semibold mb-3">Call metrics</h2>
+      <dl class="grid grid-cols-2 gap-4 text-sm">
+        <div><dt class="text-xs text-stone-500">Agent talk share</dt><dd class="text-lg font-semibold">{{ analytics.talk_ratio_agent_pct }}%</dd></div>
+        <div><dt class="text-xs text-stone-500">Questions asked</dt><dd class="text-lg font-semibold">{{ analytics.questions_asked }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Budget mentioned</dt><dd class="text-lg font-semibold">{{ 'Yes' if analytics.budget_mentioned else 'No' }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Timeline mentioned</dt><dd class="text-lg font-semibold">{{ 'Yes' if analytics.timeline_mentioned else 'No' }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Authority mentioned</dt><dd class="text-lg font-semibold">{{ 'Yes' if analytics.authority_mentioned else 'No' }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Objections handled</dt><dd class="text-lg font-semibold">{{ analytics.objections_handled }}/{{ analytics.objections_found }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Prospect sentiment</dt><dd class="text-lg font-semibold">{{ analytics.sentiment }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Next step set</dt><dd class="text-lg font-semibold">{{ 'Yes' if analytics.next_step_set else 'No' }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Agent words</dt><dd class="text-lg font-semibold">{{ analytics.agent_words }}</dd></div>
+        <div><dt class="text-xs text-stone-500">Prospect words</dt><dd class="text-lg font-semibold">{{ analytics.prospect_words }}</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div x-show="tab === 'coaching'" class="bg-white rounded-lg border border-stone-200 p-6">
+    <h2 class="text-sm font-semibold mb-4">Coaching recommendations</h2>
+    <ul class="space-y-3">
+      {% for tip in coaching %}
+      <li class="flex items-start gap-3 text-sm">
+        <span class="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs font-bold flex items-center justify-center">{{ loop.index }}</span>
+        <span class="text-stone-700 leading-relaxed">{{ tip }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+new Chart(document.getElementById('compChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Discovery', 'Talk balance', 'Qualification', 'Objections', 'Sentiment'],
+    datasets: [{ data: [
+      {{ analytics.components.questions }},
+      {{ analytics.components.talk_balance }},
+      {{ analytics.components.qualification }},
+      {{ analytics.components.objection_handling }},
+      {{ analytics.components.sentiment }}
+    ], backgroundColor: '#ea580c' }]
+  },
+  options: {
+    maintainAspectRatio: false,
+    scales: { y: { min: 0, max: 20 } },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% if audio_url %}
+<script>
+(function () {
+  const wavesurfer = WaveSurfer.create({
+    container: '#waveform',
+    url: '{{ audio_url }}',
+    waveColor: '#d6d3d1',
+    progressColor: '#ea580c',
+    height: 72,
+    barWidth: 2,
+    barGap: 1
+  });
+  const btn = document.getElementById('play-btn');
+  const ip = document.getElementById('icon-play');
+  const ipa = document.getElementById('icon-pause');
+  btn.addEventListener('click', () => wavesurfer.playPause());
+  wavesurfer.on('play', () => { ip.classList.add('hidden'); ipa.classList.remove('hidden'); });
+  wavesurfer.on('pause', () => { ipa.classList.add('hidden'); ip.classList.remove('hidden'); });
+  wavesurfer.on('finish', () => { ipa.classList.add('hidden'); ip.classList.remove('hidden'); });
+})();
+</script>
+{% endif %}
+{% endblock %}

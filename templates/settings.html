@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} - Settings{% endblock %}
+{% block nav %}
+<a href="/" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">Dashboard</a>
+<a href="/calls/new" class="block px-3 py-2 rounded-md text-stone-700 hover:bg-stone-100">New Call</a>
+<a href="/settings" class="block px-3 py-2 rounded-md bg-orange-100 text-orange-800 font-medium">Settings</a>
+{% endblock %}
+{% block content %}
+<div class="max-w-2xl">
+  <h1 class="text-2xl font-bold tracking-tight mb-6">Settings</h1>
+  <div class="bg-white rounded-lg border border-stone-200 p-6">
+    <dl class="space-y-4 text-sm">
+      <div class="flex justify-between border-b border-stone-100 pb-3">
+        <dt class="text-stone-500">Application</dt><dd class="font-medium">{{ app_name }} (beta)</dd>
+      </div>
+      <div class="flex justify-between border-b border-stone-100 pb-3">
+        <dt class="text-stone-500">AI provider</dt><dd class="font-medium">{{ provider_name }}</dd>
+      </div>
+      <div class="flex justify-between border-b border-stone-100 pb-3">
+        <dt class="text-stone-500">Calls scored</dt><dd class="font-medium">{{ total_calls }}</dd>
+      </div>
+      <div class="flex justify-between border-b border-stone-100 pb-3">
+        <dt class="text-stone-500">Audio upload directory</dt><dd class="font-mono text-xs">{{ upload_dir }}</dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-stone-500">Admin</dt><dd class="font-medium">{{ admin_email }}</dd>
+      </div>
+    </dl>
+  </div>
+  <p class="text-xs text-stone-500 mt-4">Scoring is fully deterministic and runs locally. When an LLM endpoint is configured (LLM_BASE_URL / LLM_API_KEY), call summaries are enhanced by the model; otherwise an extractive summarizer is used.</p>
+</div>
+{% endblock %}
