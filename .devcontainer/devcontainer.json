@@ -1,0 +1,18 @@
+{
+  "name": "callinsights",
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+  "service": "api",
+  "workspaceFolder": "/srv/app",
+  "forwardPorts": [
+    "8003"
+  ],
+  "portsAttributes": {
+    "8003": {
+      "label": "callinsights",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "echo 'Codespace ready: the app auto-seeds on first boot.'"
+}
