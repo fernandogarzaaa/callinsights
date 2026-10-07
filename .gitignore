@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local runtime data (uploads and SQLite DB are created at runtime)
+data/uploads/
+data/*.db
+
+# Environment
+.env
+.env.*
+!.env.example
