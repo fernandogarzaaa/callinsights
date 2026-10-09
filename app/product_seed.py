@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app import models, scoring
 from app.ai.providers import get_provider
@@ -139,7 +139,7 @@ def seed_product(db) -> dict:
     if any(c["contact_name"] in existing for c in SEED_CALLS):
         return {"calls": 0}
     provider = get_provider()
-    base = datetime(2026, 9, 27, 9, 0, 0)
+    base = datetime(2026, 9, 27, 9, 0, 0, tzinfo=timezone.utc)
     count = 0
     for c in SEED_CALLS:
         turns = scoring.parse_turns(c["transcript"])

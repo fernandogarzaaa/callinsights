@@ -91,12 +91,12 @@ def parse_upload(filename: str, raw: str) -> str:
     out: list[str] = []
     for line in lines:
         s = line.strip()
-        if name.endswith(".vtt"):
-            if s in ("", "WEBVTT") or s.startswith("NOTE") or _VTT_TS_RE.match(s):
-                continue
-        elif name.endswith(".srt"):
-            if s == "" or _SRT_TS_RE.match(s) or _SRT_NUM_RE.match(s):
-                continue
+        if name.endswith(".vtt") and (
+            s in ("", "WEBVTT") or s.startswith("NOTE") or _VTT_TS_RE.match(s)
+        ) or name.endswith(".srt") and (
+            s == "" or _SRT_TS_RE.match(s) or _SRT_NUM_RE.match(s)
+        ):
+            continue
         out.append(line)
     # Remove speaker-less cue duplicates: keep every line; parse_turns merges.
     return "\n".join(out).strip()
