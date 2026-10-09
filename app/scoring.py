@@ -91,9 +91,10 @@ def parse_upload(filename: str, raw: str) -> str:
     out: list[str] = []
     for line in lines:
         s = line.strip()
-        if name.endswith(".vtt"):
-            if s in ("", "WEBVTT") or s.startswith("NOTE") or _VTT_TS_RE.match(s):
-                continue
+        if name.endswith(".vtt") and (
+            s in ("", "WEBVTT") or s.startswith("NOTE") or _VTT_TS_RE.match(s)
+        ):
+            continue
         elif name.endswith(".srt"):
             if s == "" or _SRT_TS_RE.match(s) or _SRT_NUM_RE.match(s):
                 continue

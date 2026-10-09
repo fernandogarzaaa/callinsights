@@ -6,7 +6,7 @@ import json
 import mimetypes
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -98,7 +98,9 @@ def _parse_started_at(value: str | None):
         return None
     for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
         try:
-            return datetime.strptime(value, fmt)
+            # Parsed wall-clock times are stored as UTC; the started_at column
+            # is timezone-naive, so the instant is preserved as entered.
+            return datetime.strptime(value, fmt).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
     return None
@@ -273,7 +275,7 @@ async def create_call(request: Request, db: Session = Depends(get_db), user=Depe
     else:
         try:
             data = await request.json()
-        except Exception:
+        except ValueError:
             raise HTTPException(status_code=400, detail="Expected JSON or multipart body")
         contact_name = str(data.get("contact_name") or "")
         contact_phone = str(data.get("contact_phone") or "")
