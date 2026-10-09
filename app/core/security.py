@@ -1,20 +1,22 @@
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
+
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    # bcrypt 5.x raises ValueError for passwords longer than 72 bytes instead
+    # of silently truncating; passlib (now removed) is no longer involved.
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 def create_access_token(subject: str, expires_minutes: int | None = None) -> str:
