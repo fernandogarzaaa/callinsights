@@ -305,11 +305,11 @@ def _count_questions(turns: list[Turn]) -> int:
     return sum(t["text"].count("?") for t in turns if t["role"] == "agent")
 
 
-def _word_counts(turns: list[Turn]) -> tuple[int, int, int]:
+def _word_counts(turns: list[Turn]) -> tuple[int, int]:
+    """Words spoken by the agent and by the prospect (other speakers are ignored)."""
     agent = sum(len(_words(t["text"])) for t in turns if t["role"] == "agent")
     prospect = sum(len(_words(t["text"])) for t in turns if t["role"] == "prospect")
-    other = sum(len(_words(t["text"])) for t in turns if t["role"] == "other")
-    return agent, prospect, other
+    return agent, prospect
 
 
 def _mentions(turns: list[Turn]) -> tuple[bool, bool, bool]:
@@ -321,26 +321,29 @@ def _mentions(turns: list[Turn]) -> tuple[bool, bool, bool]:
     )
 
 
-def _objections(turns: list[Turn]) -> tuple[int, int, list[str]]:
-    """Return (found, handled, handled_keywords)."""
+def _objections(turns: list[Turn]) -> tuple[int, int]:
+    """Return ``(found, handled)``.
+
+    A prospect turn containing an objection counts as handled when a *later* agent turn
+    repeats the concern or uses a resolution phrase.
+    """
     found = 0
     handled = 0
-    handled_kws: list[str] = []
-    prospect_idxs = [i for i, t in enumerate(turns) if t["role"] == "prospect"]
-    for i in prospect_idxs:
-        kw = _contains_any(turns[i]["text"], OBJECTION_WORDS)
+    for i, turn in enumerate(turns):
+        if turn["role"] != "prospect":
+            continue
+        kw = _contains_any(turn["text"], OBJECTION_WORDS)
         if not kw:
             continue
         found += 1
         later_agent = " ".join(t["text"] for t in turns[i + 1 :] if t["role"] == "agent").lower()
         if _phrase_re(kw).search(later_agent) or _contains_any(later_agent, RESOLUTION_WORDS):
             handled += 1
-            handled_kws.append(kw)
-    return found, handled, handled_kws
+    return found, handled
 
 
 def _sentiment(turns: list[Turn]) -> float:
-    """Net sentiment of prospect speech in [-1, 1]."""
+    """Net sentiment of prospect speech in [-1, 1]: (positive - negative) / words."""
     words: list[str] = []
     for t in turns:
         if t["role"] == "prospect":
@@ -349,7 +352,7 @@ def _sentiment(turns: list[Turn]) -> float:
         return 0.0
     pos = sum(1 for w in words if w in POSITIVE_WORDS)
     neg = sum(1 for w in words if w in NEGATIVE_WORDS)
-    return max(-1.0, min(1.0, (pos - neg) / len(words)))
+    return (pos - neg) / len(words)
 
 
 def _next_step_set(turns: list[Turn]) -> bool:
@@ -357,88 +360,154 @@ def _next_step_set(turns: list[Turn]) -> bool:
     return _contains_any(full, NEXT_STEP_WORDS) is not None
 
 
+# Each component is worth up to 20 points; the total is their sum (0-100).
+COMPONENT_MAX = 20.0
+QUESTION_TARGET = 8
+INTERESTED_AT = 75
+FOLLOW_UP_AT = 50
+
+
+def component_scores(
+    questions: int,
+    talk_ratio: float,
+    qualified: int,
+    objections_found: int,
+    objections_handled: int,
+    sentiment: float,
+) -> dict[str, float]:
+    """The five 0-20 point components, unrounded.
+
+    ``qualified`` is how many of budget / timeline / authority (0-3) came up.
+    """
+    return {
+        "questions": min(questions, QUESTION_TARGET) / QUESTION_TARGET * COMPONENT_MAX,
+        "talk_balance": max(0.0, 1 - abs(talk_ratio - 0.5) / 0.5) * COMPONENT_MAX,
+        "qualification": qualified / 3 * COMPONENT_MAX,
+        "objection_handling": (
+            objections_handled / objections_found * COMPONENT_MAX
+            if objections_found
+            else COMPONENT_MAX
+        ),
+        "sentiment": max(0.0, min(COMPONENT_MAX, 10 + sentiment * 50)),
+    }
+
+
+def outcome_for(total: int) -> str:
+    if total >= INTERESTED_AT:
+        return "Interested"
+    if total >= FOLLOW_UP_AT:
+        return "Follow Up"
+    return "Not Interested"
+
+
+def coaching_tips(
+    *,
+    talk_ratio: float,
+    spoken: int,
+    questions: int,
+    budget: bool,
+    timeline: bool,
+    authority: bool,
+    objections_found: int,
+    objections_handled: int,
+    sentiment: float,
+    next_step: bool,
+    total: int,
+) -> list[str]:
+    tips: list[str] = []
+    pct = round(talk_ratio * 100)
+    if talk_ratio > 0.7:
+        tips.append(
+            f"Let the prospect speak more: you talked {pct}% of the time. "
+            "Aim for a 40-60% talk share."
+        )
+    elif talk_ratio < 0.25 and spoken > 0:
+        tips.append(
+            f"You only talked {pct}% of the time. Guide the conversation with "
+            "targeted discovery questions."
+        )
+    if questions < 3:
+        tips.append(
+            f"Ask more discovery questions (you asked {questions}). Strong calls ask 5 or more."
+        )
+    if not budget:
+        tips.append("Qualify budget earlier: ask about budget range before the pitch.")
+    if not timeline:
+        tips.append("Establish a timeline: ask when they need a solution live.")
+    if not authority:
+        tips.append("Confirm authority: ask who else weighs in on the decision.")
+    if objections_found > objections_handled:
+        tips.append(
+            f"Address objections directly: {objections_found - objections_handled} raised "
+            "concern(s) went unanswered. Name the concern and offer a concrete fix."
+        )
+    if sentiment < -0.02:
+        tips.append(
+            "Watch the prospect's tone: acknowledge their frustration explicitly before moving on."
+        )
+    if not next_step:
+        tips.append(
+            "Always close with a concrete next step: a scheduled follow-up, a proposal, or a trial."
+        )
+    if total >= INTERESTED_AT:
+        tips.append(
+            "Strong call: keep this structure. Replicate the discovery cadence "
+            "and the explicit close."
+        )
+    return tips
+
+
 def score_call(turns: list[Turn]) -> dict[str, Any]:
     """Score a parsed call. Returns a dict with score 0-100 and all parts."""
     questions = _count_questions(turns)
-    agent_w, prospect_w, _ = _word_counts(turns)
+    agent_w, prospect_w = _word_counts(turns)
     spoken = agent_w + prospect_w
     talk_ratio = agent_w / spoken if spoken else 0.0
     budget, timeline, authority = _mentions(turns)
-    obj_found, obj_handled, _ = _objections(turns)
+    obj_found, obj_handled = _objections(turns)
     sentiment = _sentiment(turns)
     next_step = _next_step_set(turns)
 
-    # Component scores, each 0-20.
-    q_score = min(questions, 8) / 8 * 20
-    balance = max(0.0, 1 - abs(talk_ratio - 0.5) / 0.5) * 20
-    qual_score = (int(budget) + int(timeline) + int(authority)) / 3 * 20
-    obj_score = obj_handled / obj_found * 20 if obj_found else 20.0
-    sent_score = max(0.0, min(20.0, 10 + sentiment * 50))
-
-    total = round(q_score + balance + qual_score + obj_score + sent_score)
-    total = max(0, min(100, total))
-    outcome = "Interested" if total >= 75 else ("Follow Up" if total >= 50 else "Not Interested")
-
+    parts = component_scores(
+        questions,
+        talk_ratio,
+        int(budget) + int(timeline) + int(authority),
+        obj_found,
+        obj_handled,
+        sentiment,
+    )
+    total = round(sum(parts.values()))
     highlights: list[dict[str, Any]] = [
         {"label": "Budget discussed", "met": budget},
         {"label": "Timeline established", "met": timeline},
         {"label": "Decision maker confirmed", "met": authority},
         {
             "label": "Objections handled",
-            "met": obj_found == 0 or obj_handled == obj_found,
-            "detail": f"{obj_handled}/{obj_found} addressed"
-            if obj_found
-            else "No objections raised",
+            "met": obj_handled == obj_found,
+            "detail": (
+                f"{obj_handled}/{obj_found} addressed" if obj_found else "No objections raised"
+            ),
         },
         {"label": "Next step set", "met": next_step},
     ]
-
-    coaching: list[str] = []
-    pct = round(talk_ratio * 100)
-    if talk_ratio > 0.7:
-        coaching.append(
-            f"Let the prospect speak more: you talked {pct}% of the time. "
-            "Aim for a 40-60% talk share."
-        )
-    elif talk_ratio < 0.25 and spoken > 0:
-        coaching.append(
-            f"You only talked {pct}% of the time. Guide the conversation with "
-            "targeted discovery questions."
-        )
-    if questions < 3:
-        coaching.append(
-            f"Ask more discovery questions (you asked {questions}). Strong calls ask 5 or more."
-        )
-    if not budget:
-        coaching.append("Qualify budget earlier: ask about budget range before the pitch.")
-    if not timeline:
-        coaching.append("Establish a timeline: ask when they need a solution live.")
-    if not authority:
-        coaching.append("Confirm authority: ask who else weighs in on the decision.")
-    if obj_found > obj_handled:
-        coaching.append(
-            f"Address objections directly: {obj_found - obj_handled} raised "
-            "concern(s) went unanswered. Name the concern and offer a concrete fix."
-        )
-    if sentiment < -0.02:
-        coaching.append(
-            "Watch the prospect's tone: acknowledge their frustration explicitly before moving on."
-        )
-    if not next_step:
-        coaching.append(
-            "Always close with a concrete next step: a scheduled follow-up, a proposal, or a trial."
-        )
-    if total >= 75:
-        coaching.append(
-            "Strong call: keep this structure. Replicate the discovery cadence "
-            "and the explicit close."
-        )
-
+    coaching = coaching_tips(
+        talk_ratio=talk_ratio,
+        spoken=spoken,
+        questions=questions,
+        budget=budget,
+        timeline=timeline,
+        authority=authority,
+        objections_found=obj_found,
+        objections_handled=obj_handled,
+        sentiment=sentiment,
+        next_step=next_step,
+        total=total,
+    )
     return {
         "score": total,
-        "outcome": outcome,
+        "outcome": outcome_for(total),
         "talk_ratio": round(talk_ratio, 3),
-        "talk_ratio_agent_pct": pct,
+        "talk_ratio_agent_pct": round(talk_ratio * 100),
         "questions_asked": questions,
         "agent_words": agent_w,
         "prospect_words": prospect_w,
@@ -451,11 +520,5 @@ def score_call(turns: list[Turn]) -> dict[str, Any]:
         "next_step_set": next_step,
         "highlights": highlights,
         "coaching": coaching,
-        "components": {
-            "questions": round(q_score, 1),
-            "talk_balance": round(balance, 1),
-            "qualification": round(qual_score, 1),
-            "objection_handling": round(obj_score, 1),
-            "sentiment": round(sent_score, 1),
-        },
+        "components": {k: round(v, 1) for k, v in parts.items()},
     }

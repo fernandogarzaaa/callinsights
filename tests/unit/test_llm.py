@@ -491,3 +491,56 @@ def test_build_llm_provider(tmp_path: Any) -> None:
     assert p.speaker_labeling is False
     assert p.max_transcript_chars == 5000
     assert p.name == "openai-compatible"
+
+
+# --- defaults and edge cases (mutation-testing hardening) ----------------------------------
+
+
+def test_retryable_status_set() -> None:
+    assert frozenset({408, 409, 425, 429, 500, 502, 503, 504}) == llm.RETRYABLE_STATUS
+
+
+def test_extractive_summary_default_and_stopword_weight() -> None:
+    long_text = " ".join(f"Topic{i} detail{i} here{i}." for i in range(8))
+    assert extractive_summary(long_text) == extractive_summary(long_text, 4)
+    assert len(extractive_summary(long_text).split(". ")) == 4
+    assert LocalProvider().summarize(long_text) == extractive_summary(long_text, 4)
+    # A stopword-only sentence scores zero, so any content sentence beats it.
+    assert extractive_summary("It is what it is. Unique.", 1) == "Unique."
+
+
+def test_unhandled_defaults() -> None:
+    assert llm._unhandled({"objections_found": 2}) == 2
+    assert llm._unhandled({"objections_handled": 1}) == -1
+    assert llm._unhandled({}) == 0
+
+
+def test_parse_json_object_brace_edges() -> None:
+    assert parse_json_object('prefix {"a": 1}!') == {"a": 1}
+    with pytest.raises(LLMError, match="no JSON object"):
+        parse_json_object("oops }")
+
+
+def test_provider_defaults() -> None:
+    p = OpenAICompatibleProvider("https://x/v1", "k", "m")
+    assert p.max_retries == 2
+    assert p.max_transcript_chars == 24_000
+    assert p.speaker_labeling is True
+    assert p._client.timeout.read == 60.0
+    p2 = OpenAICompatibleProvider("https://x/v1", "k", "m", timeout=5.0)
+    assert p2._client.timeout.read == 5.0
+
+
+def test_remote_summarize_default_sentences() -> None:
+    rec = Recorder(completion("ok"))
+    p, _ = provider(rec)
+    assert p.summarize("text") == "ok"
+    assert "at most 4 sentences" in rec.body()["messages"][0]["content"]
+
+
+def test_chat_read_timeout_is_retried_then_fails() -> None:
+    rec = Recorder(httpx.ReadTimeout("slow"), httpx.ReadTimeout("slow"))
+    p, sleeps = provider(rec, max_retries=1)
+    with pytest.raises(LLMError, match="transport error: slow"):
+        p.chat([])
+    assert sleeps == [1.0]
