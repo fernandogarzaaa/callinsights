@@ -8,7 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from callinsights.ai.asr import MockTranscriber
-from tests.conftest import ADMIN_EMAIL, ADMIN_PASSWORD, build_client, login, make_settings
+from tests.conftest import ADMIN_EMAIL, ADMIN_PASSWORD, make_settings
+from tests.helpers import build_client, login
 
 pytestmark = pytest.mark.integration
 

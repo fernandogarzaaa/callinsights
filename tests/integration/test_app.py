@@ -14,14 +14,8 @@ from callinsights import __version__, cli
 from callinsights.ai.llm import OpenAICompatibleProvider
 from callinsights.config import get_settings
 from callinsights.main import create_app
-from tests.conftest import (
-    ADMIN_EMAIL,
-    ADMIN_PASSWORD,
-    GOOD_TRANSCRIPT,
-    build_client,
-    login,
-    make_settings,
-)
+from tests.conftest import ADMIN_EMAIL, ADMIN_PASSWORD, GOOD_TRANSCRIPT, make_settings
+from tests.helpers import build_client, login
 
 pytestmark = pytest.mark.integration
 

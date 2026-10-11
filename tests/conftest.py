@@ -1,18 +1,17 @@
-"""Shared fixtures. Every test runs offline: local LLM provider, mock ASR, temp SQLite."""
+"""Shared fixtures. Every test runs offline: local LLM provider, mock ASR, temp SQLite.
+
+Kept import-light so unit tests (and mutation testing) start fast; HTTP fixtures live in
+tests/integration/conftest.py.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
 
-from callinsights.ai.asr import MockTranscriber, Transcriber
-from callinsights.ai.llm import LocalProvider
 from callinsights.config import Settings
-from callinsights.main import create_app
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "Adm1n-password!"
@@ -50,47 +49,3 @@ def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     return make_settings(tmp_path)
-
-
-def build_client(
-    settings: Settings,
-    transcriber: Transcriber | None = None,
-    *,
-    use_default_transcriber: bool = True,
-    llm: Any = None,
-) -> TestClient:
-    app = create_app(
-        settings,
-        llm=llm or LocalProvider(),
-        transcriber=transcriber,
-        use_default_transcriber=use_default_transcriber,
-    )
-    return TestClient(app, base_url="http://testserver", headers={"Origin": "http://testserver"})
-
-
-def login(client: TestClient, email: str = ADMIN_EMAIL, password: str = ADMIN_PASSWORD) -> str:
-    r = client.post("/api/auth/login", json={"email": email, "password": password})
-    assert r.status_code == 200, r.text
-    token: str = r.json()["access_token"]
-    return token
-
-
-@pytest.fixture
-def anon(settings: Settings) -> Iterator[TestClient]:
-    with build_client(settings, MockTranscriber()) as client:
-        yield client
-
-
-@pytest.fixture
-def client(anon: TestClient) -> TestClient:
-    """Admin session (cookie) on a fresh database."""
-    login(anon)
-    return anon
-
-
-@pytest.fixture
-def seeded(tmp_path: Path) -> Iterator[TestClient]:
-    """Admin session on a database with the five demo calls."""
-    with build_client(make_settings(tmp_path, SEED_DEMO_DATA=True), MockTranscriber()) as c:
-        login(c)
-        yield c

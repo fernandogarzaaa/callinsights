@@ -45,6 +45,7 @@ def test_hits_accumulate_across_prunes() -> None:
     lim.hit("k")
     clock.now += 11
     lim.hit("k")  # old hit pruned, new one recorded
+    assert list(lim._hits["k"]) == [1011.0]
     assert lim.is_blocked("k") is False
     lim.hit("k")
     assert lim.is_blocked("k") is True
@@ -57,6 +58,14 @@ def test_retry_after() -> None:
     assert lim.retry_after("k") == 0
     lim.hit("k")
     assert lim.retry_after("k") == 10
+
+
+def test_retry_after_uses_oldest_hit() -> None:
+    lim, clock = make(2, window=10)
+    lim.hit("k")
+    clock.now += 4
+    lim.hit("k")
+    assert lim.retry_after("k") == 6  # the oldest hit leaves the window first
     clock.now += 3.5
     assert lim.retry_after("k") == 7  # ceil(6.5)
     clock.now += 6.25
