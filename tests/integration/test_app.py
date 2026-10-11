@@ -40,11 +40,13 @@ def test_health_endpoints(anon: TestClient) -> None:
     }
 
 
-def test_readiness_reports_database_down(tmp_path: Path) -> None:
-    bad = tmp_path / "isdir.db"
-    bad.mkdir()
-    s = make_settings(tmp_path, DATABASE_URL=f"sqlite:///{bad}", AUTO_MIGRATE=False)
+def test_readiness_reports_database_down(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    s = make_settings(tmp_path)
     with build_client(s, use_default_transcriber=False) as c:
+        assert c.get("/readyz").status_code == 200
+        monkeypatch.setattr("callinsights.main.check_database", lambda engine: False)
         assert c.get("/readyz").status_code == 503
         r = c.get("/api/health")
         assert r.status_code == 503

@@ -123,7 +123,8 @@ def test_successful_login_resets_limiter(tmp_path: Path) -> None:
     with build_client(make_settings(tmp_path, LOGIN_MAX_ATTEMPTS=2)) as c:
         bad = {"email": ADMIN_EMAIL, "password": "wrong-one"}
         assert c.post("/api/auth/login", json=bad).status_code == 401
-        login(c)
+        login(c)  # success clears the earlier failure
+        assert c.post("/api/auth/login", json=bad).status_code == 401
         assert c.post("/api/auth/login", json=bad).status_code == 401
         assert c.post("/api/auth/login", json=bad).status_code == 429
 
