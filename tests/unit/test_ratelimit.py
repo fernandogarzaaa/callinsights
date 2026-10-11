@@ -58,6 +58,10 @@ def test_retry_after() -> None:
     assert lim.retry_after("k") == 0
     lim.hit("k")
     assert lim.retry_after("k") == 10
+    clock.now += 3.5
+    assert lim.retry_after("k") == 7  # ceil(6.5)
+    clock.now += 6.25
+    assert lim.retry_after("k") == 1  # ceil(0.25)
 
 
 def test_retry_after_uses_oldest_hit() -> None:
@@ -66,10 +70,6 @@ def test_retry_after_uses_oldest_hit() -> None:
     clock.now += 4
     lim.hit("k")
     assert lim.retry_after("k") == 6  # the oldest hit leaves the window first
-    clock.now += 3.5
-    assert lim.retry_after("k") == 7  # ceil(6.5)
-    clock.now += 6.25
-    assert lim.retry_after("k") == 1  # ceil(0.25)
 
 
 def test_reset_clears_key() -> None:
