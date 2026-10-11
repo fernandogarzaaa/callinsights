@@ -97,7 +97,7 @@ def test_extractive_summary_normalizes_by_length() -> None:
     # A long sentence of rare words must not beat a short sentence of frequent ones.
     text = (
         "Alpha beta gamma delta epsilon zeta eta theta iota kappa. "
-        "Renewal renewal. Renewal soon. Lambda."
+        "Renewal renewal. Renewal soon. Renewal now."
     )
     assert extractive_summary(text, 2) == "Renewal renewal. Renewal soon."
 
