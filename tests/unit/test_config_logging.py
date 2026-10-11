@@ -59,7 +59,7 @@ def test_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     ],
 )
 def test_database_url_normalization(url: str, expected: str) -> None:
-    assert Settings(_env_file=None, DATABASE_URL=url).DATABASE_URL == expected  # type: ignore[call-arg]
+    assert expected == Settings(_env_file=None, DATABASE_URL=url).DATABASE_URL  # type: ignore[call-arg]
 
 
 def test_admin_normalization() -> None:
@@ -70,8 +70,13 @@ def test_admin_normalization() -> None:
 
 
 def test_llm_mode_explicit() -> None:
-    assert Settings(_env_file=None, LLM_PROVIDER="local", LLM_BASE_URL="http://x").llm_mode == "local"  # type: ignore[call-arg]
-    assert Settings(_env_file=None, LLM_PROVIDER="openai", LLM_BASE_URL="http://x").llm_mode == "openai"  # type: ignore[call-arg]
+    assert (
+        Settings(_env_file=None, LLM_PROVIDER="local", LLM_BASE_URL="http://x").llm_mode == "local"
+    )  # type: ignore[call-arg]
+    assert (
+        Settings(_env_file=None, LLM_PROVIDER="openai", LLM_BASE_URL="http://x").llm_mode
+        == "openai"
+    )  # type: ignore[call-arg]
 
 
 def test_provider_requirements() -> None:

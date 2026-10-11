@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 import types
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 import pytest
@@ -61,7 +61,7 @@ class FakeWhisperSegment:
 
 
 class FakeWhisperModel:
-    instances: list[FakeWhisperModel] = []
+    instances: ClassVar[list[FakeWhisperModel]] = []
 
     def __init__(self, size: str, device: str, compute_type: str) -> None:
         self.args = (size, device, compute_type)

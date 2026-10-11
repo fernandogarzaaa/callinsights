@@ -385,7 +385,7 @@ def test_list_calls_filters_and_pagination(db: Session) -> None:
     weak = _mk(db, "Rob", "Jake", WEAK, days_ago=40)
     queued = svc.create_call(db, llm=LLM, user=None, audio=("a.wav", "a.wav"), agent="Maya")
     db.commit()
-    F = svc.CallFilters
+    F = svc.CallFilters  # noqa: N806
     ids = lambda f, **kw: [c.id for c in svc.list_calls(db, f, **kw)[0]]  # noqa: E731
     assert ids(F()) == [queued.id, good.id, weak.id]
     assert svc.list_calls(db, F())[1] == 3

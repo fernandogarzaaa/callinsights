@@ -14,7 +14,9 @@ pytestmark = pytest.mark.integration
 
 
 def test_login_returns_token_and_cookie(anon: TestClient) -> None:
-    r = anon.post("/api/auth/login", json={"email": ADMIN_EMAIL.upper(), "password": ADMIN_PASSWORD})
+    r = anon.post(
+        "/api/auth/login", json={"email": ADMIN_EMAIL.upper(), "password": ADMIN_PASSWORD}
+    )
     assert r.status_code == 200
     body = r.json()
     assert body["token_type"] == "bearer"
@@ -34,10 +36,21 @@ def test_secure_cookie_when_configured(tmp_path: Path) -> None:
 
 
 def test_login_failures(anon: TestClient) -> None:
-    assert anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": "nope"}).status_code == 401
-    assert anon.post("/api/auth/login", json={"email": "x@y.zz", "password": "nope"}).status_code == 401
+    assert (
+        anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": "nope"}).status_code
+        == 401
+    )
+    assert (
+        anon.post("/api/auth/login", json={"email": "x@y.zz", "password": "nope"}).status_code
+        == 401
+    )
     assert anon.post("/api/auth/login", json={"email": ADMIN_EMAIL}).status_code == 422
-    assert anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": "x", "extra": 1}).status_code == 422
+    assert (
+        anon.post(
+            "/api/auth/login", json={"email": ADMIN_EMAIL, "password": "x", "extra": 1}
+        ).status_code
+        == 422
+    )
 
 
 def test_bearer_token_and_me(anon: TestClient) -> None:
@@ -224,9 +237,12 @@ def test_user_admin(client: TestClient) -> None:
     disabled = client.patch(f"/api/users/{rep['id']}", json={"is_active": False})
     assert disabled.json()["is_active"] is False
     assert member.get("/api/auth/me").status_code == 401
-    assert member.post(
-        "/api/auth/login", json={"email": "rep@example.com", "password": "An0ther-pass"}
-    ).status_code == 401
+    assert (
+        member.post(
+            "/api/auth/login", json={"email": "rep@example.com", "password": "An0ther-pass"}
+        ).status_code
+        == 401
+    )
     assert client.delete(f"/api/users/{rep['id']}").status_code == 204
     assert client.delete(f"/api/users/{rep['id']}").status_code == 404
 

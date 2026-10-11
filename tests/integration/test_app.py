@@ -40,9 +40,7 @@ def test_health_endpoints(anon: TestClient) -> None:
     }
 
 
-def test_readiness_reports_database_down(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_readiness_reports_database_down(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     s = make_settings(tmp_path)
     with build_client(s, use_default_transcriber=False) as c:
         assert c.get("/readyz").status_code == 200
@@ -99,7 +97,12 @@ def test_pages_render(seeded: TestClient) -> None:
 
     detail = seeded.get("/calls/1")
     assert detail.status_code == 200
-    for text in ("Coaching recommendations", "Key highlights", "Next best action", "Edit transcript"):
+    for text in (
+        "Coaching recommendations",
+        "Key highlights",
+        "Next best action",
+        "Edit transcript",
+    ):
         assert text in detail.text
     missing = seeded.get("/calls/999")
     assert missing.status_code == 404
@@ -122,7 +125,11 @@ def test_pages_redirect_when_anonymous(anon: TestClient) -> None:
 
 
 def test_static_assets_are_served(anon: TestClient) -> None:
-    for asset in ("/static/app.css", "/static/vendor/alpine.min.js", "/static/vendor/chart.umd.min.js"):
+    for asset in (
+        "/static/app.css",
+        "/static/vendor/alpine.min.js",
+        "/static/vendor/chart.umd.min.js",
+    ):
         assert anon.get(asset).status_code == 200, asset
 
 
@@ -144,7 +151,9 @@ def test_openai_compatible_provider_end_to_end(tmp_path: Path) -> None:
         )
 
     llm = OpenAICompatibleProvider(
-        "https://fake.llm/v1", "", "fake-model",
+        "https://fake.llm/v1",
+        "",
+        "fake-model",
         client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
     with build_client(make_settings(tmp_path), llm=llm) as c:

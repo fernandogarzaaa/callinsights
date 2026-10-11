@@ -357,11 +357,6 @@ def _next_step_set(turns: list[Turn]) -> bool:
     return _contains_any(full, NEXT_STEP_WORDS) is not None
 
 
-def plain_text(turns: list[Turn]) -> str:
-    """Turn texts without speaker labels, for clean extractive summaries."""
-    return " ".join(t["text"] for t in turns)
-
-
 def score_call(turns: list[Turn]) -> dict[str, Any]:
     """Score a parsed call. Returns a dict with score 0-100 and all parts."""
     questions = _count_questions(turns)

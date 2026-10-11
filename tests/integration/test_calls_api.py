@@ -118,7 +118,9 @@ def test_multipart_validation(client: TestClient) -> None:
         files={"audio_file": ("x.exe", b"MZ", "application/octet-stream")},
     )
     assert bad_audio.status_code == 400
-    bad_field = client.post("/api/calls", data={"transcript_text": "Agent: x", "duration_sec": "abc"})
+    bad_field = client.post(
+        "/api/calls", data={"transcript_text": "Agent: x", "duration_sec": "abc"}
+    )
     assert bad_field.status_code == 422
 
 
@@ -198,7 +200,11 @@ def test_list_filters_and_pagination(seeded: TestClient) -> None:
     assert seeded.get("/api/calls", params={"status": "queued"}).json()["total"] == 0
     assert seeded.get("/api/calls", params={"limit": 0}).status_code == 422
     assert seeded.get("/api/calls", params={"min_score": 101}).status_code == 422
-    assert seeded.get("/api/agents").json()["agents"] == ["Jake Rivera", "Maya Santos", "Priya Nair"]
+    assert seeded.get("/api/agents").json()["agents"] == [
+        "Jake Rivera",
+        "Maya Santos",
+        "Priya Nair",
+    ]
 
 
 def test_analytics_endpoint(seeded: TestClient) -> None:
@@ -230,7 +236,9 @@ def test_score_endpoint_is_stateless(client: TestClient) -> None:
 def test_patch_rescore_delete(client: TestClient) -> None:
     call = create(client, transcript_text="Agent: Hello.\nProspect: Bye.")
     cid = call["id"]
-    r = client.patch(f"/api/calls/{cid}", json={"agent": "New Agent", "transcript_text": GOOD_TRANSCRIPT})
+    r = client.patch(
+        f"/api/calls/{cid}", json={"agent": "New Agent", "transcript_text": GOOD_TRANSCRIPT}
+    )
     assert r.status_code == 200
     assert r.json()["agent"] == "New Agent"
     assert r.json()["transcript_source"] == "edited"

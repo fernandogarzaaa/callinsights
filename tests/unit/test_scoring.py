@@ -290,12 +290,27 @@ def test_highlights_unmet_and_detail():
 def test_score_dict_schema():
     r = scoring.score_call(_balanced_call())
     for key in (
-        "score", "outcome", "talk_ratio", "questions_asked", "budget_mentioned",
-        "timeline_mentioned", "authority_mentioned", "objections_found",
-        "objections_handled", "sentiment", "next_step_set", "highlights",
-        "coaching", "components",
+        "score",
+        "outcome",
+        "talk_ratio",
+        "questions_asked",
+        "budget_mentioned",
+        "timeline_mentioned",
+        "authority_mentioned",
+        "objections_found",
+        "objections_handled",
+        "sentiment",
+        "next_step_set",
+        "highlights",
+        "coaching",
+        "components",
     ):
         assert key in r, key
     assert 0 <= r["score"] <= 100
     assert r["outcome"] in ("Interested", "Follow Up", "Not Interested")
     assert r["coaching"], "coaching should never be empty"
+
+
+def test_parse_turns_skips_empty_utterances() -> None:
+    turns = scoring.parse_turns("Agent:\nProspect:   \nAgent: Real line")
+    assert turns == [{"speaker": "Agent", "role": "agent", "text": "Real line"}]

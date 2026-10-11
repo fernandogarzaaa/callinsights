@@ -9,7 +9,7 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "S108", "S311", "E501"]
+"tests/**" = ["S101", "S105", "S106", "S108", "S311", "E501", "PT018"]
 "callinsights/migrations/**" = ["E501"]
 "callinsights/demo_data.py" = ["E501"]
 
