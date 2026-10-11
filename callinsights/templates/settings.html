@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} - Settings{% endblock %}
+{% block content %}
+<div class="max-w-3xl space-y-6" x-data="settingsPage()" x-init="load()">
+  <h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+  <div class="bg-white rounded-lg border border-stone-200 p-6">
+    <h2 class="text-sm font-semibold mb-4">System</h2>
+    <dl class="space-y-3 text-sm">
+      {% for label, value in [('Version', version), ('Environment', env), ('AI insights provider', provider_name), ('Speech-to-text', asr_name), ('Calls stored', total_calls)] %}
+      <div class="flex justify-between border-b border-stone-100 pb-3"><dt class="text-stone-500">{{ label }}</dt><dd class="font-medium">{{ value }}</dd></div>
+      {% endfor %}
+    </dl>
+    <p class="text-xs text-stone-500 mt-4">Scores are deterministic and computed locally. With an OpenAI-compatible LLM configured (LLM_BASE_URL, LLM_MODEL), summaries and coaching are written by the model; otherwise a local extractive engine is used. Configure via environment variables (see .env.example).</p>
+  </div>
+
+  <div class="bg-white rounded-lg border border-stone-200 p-6">
+    <h2 class="text-sm font-semibold mb-1">API keys</h2>
+    <p class="text-xs text-stone-500 mb-4">Use <span class="font-mono">Authorization: Bearer &lt;key&gt;</span> to call the API from scripts and integrations.</p>
+    <form @submit.prevent="createKey()" class="flex gap-2 mb-4">
+      <input x-model="keyName" required maxlength="100" placeholder="Key name, e.g. dialer-sync" class="flex-1 text-sm border border-stone-300 rounded-md px-3 py-2">
+      <button class="text-sm bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700">Create key</button>
+    </form>
+    <template x-if="newKey"><div class="mb-4 text-xs bg-emerald-50 border border-emerald-200 rounded-md p-3">Copy this key now; it will not be shown again:<div class="font-mono break-all mt-1 text-sm" x-text="newKey"></div></div></template>
+    <table class="w-full text-sm">
+      <thead class="text-xs text-stone-500 uppercase"><tr><th class="text-left py-2">Name</th><th class="text-left py-2">Prefix</th><th class="text-left py-2">Last used</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="k in keys" :key="k.id">
+          <tr class="border-t border-stone-100">
+            <td class="py-2" x-text="k.name"></td><td class="py-2 font-mono text-xs" x-text="k.prefix + '...'"></td>
+            <td class="py-2 text-xs text-stone-500" x-text="k.revoked_at ? 'revoked' : (k.last_used_at || 'never')"></td>
+            <td class="py-2 text-right"><button x-show="!k.revoked_at" @click="revokeKey(k.id)" class="text-xs text-red-700 hover:underline">Revoke</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  {% if user.is_admin %}
+  <div class="bg-white rounded-lg border border-stone-200 p-6">
+    <h2 class="text-sm font-semibold mb-4">Team</h2>
+    <form @submit.prevent="createUser()" class="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-4">
+      <input x-model="nu.email" type="email" required placeholder="Email" class="text-sm border border-stone-300 rounded-md px-3 py-2">
+      <input x-model="nu.name" placeholder="Name" class="text-sm border border-stone-300 rounded-md px-3 py-2">
+      <input x-model="nu.password" type="password" required minlength="10" placeholder="Temp password (10+)" class="text-sm border border-stone-300 rounded-md px-3 py-2">
+      <div class="flex gap-2">
+        <select x-model="nu.role" class="text-sm border border-stone-300 rounded-md px-2 py-2 bg-white"><option value="member">member</option><option value="admin">admin</option></select>
+        <button class="text-sm bg-orange-600 text-white px-3 py-2 rounded-md hover:bg-orange-700">Add</button>
+      </div>
+    </form>
+    <table class="w-full text-sm">
+      <thead class="text-xs text-stone-500 uppercase"><tr><th class="text-left py-2">Email</th><th class="text-left py-2">Role</th><th class="text-left py-2">Status</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="u in users" :key="u.id">
+          <tr class="border-t border-stone-100">
+            <td class="py-2" x-text="u.email"></td><td class="py-2" x-text="u.role"></td>
+            <td class="py-2 text-xs" x-text="u.is_active ? 'active' : 'disabled'"></td>
+            <td class="py-2 text-right"><button @click="toggleUser(u)" class="text-xs text-orange-700 hover:underline" x-text="u.is_active ? 'Disable' : 'Enable'"></button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <p class="text-sm text-red-700" x-text="error"></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function settingsPage() {
+  async function api(method, url, body) {
+    const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    if (!r.ok) { let m = 'Request failed (' + r.status + ')'; try { const d = await r.json(); m = typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail); } catch (e) {} throw new Error(m); }
+    return r.status === 204 ? null : r.json();
+  }
+  return {
+    keys: [], users: [], keyName: '', newKey: '', error: '', isAdmin: {{ 'true' if user.is_admin else 'false' }},
+    nu: { email: '', name: '', password: '', role: 'member' },
+    async load() {
+      try { this.keys = await api('GET', '/api/keys'); if (this.isAdmin) this.users = await api('GET', '/api/users'); }
+      catch (e) { this.error = e.message; }
+    },
+    async createKey() { try { const k = await api('POST', '/api/keys', { name: this.keyName }); this.newKey = k.key; this.keyName = ''; await this.load(); } catch (e) { this.error = e.message; } },
+    async revokeKey(id) { try { await api('DELETE', '/api/keys/' + id); await this.load(); } catch (e) { this.error = e.message; } },
+    async createUser() { try { await api('POST', '/api/users', this.nu); this.nu = { email: '', name: '', password: '', role: 'member' }; await this.load(); } catch (e) { this.error = e.message; } },
+    async toggleUser(u) { try { await api('PATCH', '/api/users/' + u.id, { is_active: !u.is_active }); await this.load(); } catch (e) { this.error = e.message; } },
+  };
+}
+</script>
+{% endblock %}

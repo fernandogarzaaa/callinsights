@@ -1,33 +1,41 @@
+# Production-style stack: CallInsights + PostgreSQL.
+#   cp .env.example .env   # then set SECRET_KEY, ADMIN_PASSWORD, POSTGRES_PASSWORD
+#   docker compose up -d --build
 services:
   db:
-    image: pgvector/pgvector:0.8.0-pg16
+    image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: clusterx
-      POSTGRES_PASSWORD: clusterx
-      POSTGRES_DB: clusterx
+      POSTGRES_USER: ${POSTGRES_USER:-callinsights}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-callinsights}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U clusterx"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-callinsights} -d ${POSTGRES_DB:-callinsights}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  api:
-    build: .
+  app:
+    build:
+      context: .
+      args:
+        EXTRAS: ${DOCKER_EXTRAS:-postgres}
+    restart: unless-stopped
     ports:
       - "${PORT:-8003}:${PORT:-8003}"
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg2://clusterx:clusterx@db:5432/clusterx
-      PORT: ${PORT:-8003}
-      SEED_ON_STARTUP: "1"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-callinsights}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-callinsights}
+      DATA_DIR: /data
     volumes:
-      - ./data:/srv/app/data
+      - appdata:/data
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   pgdata:
+  appdata:

@@ -1,18 +1,18 @@
 {
   "name": "callinsights",
-  "dockerComposeFile": [
-    "../docker-compose.yml"
-  ],
-  "service": "api",
-  "workspaceFolder": "/srv/app",
-  "forwardPorts": [
-    "8003"
-  ],
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "forwardPorts": [8003],
   "portsAttributes": {
-    "8003": {
-      "label": "callinsights",
-      "onAutoForward": "openPreview"
-    }
+    "8003": { "label": "callinsights", "onAutoForward": "openPreview" }
   },
-  "postCreateCommand": "echo 'Codespace ready: the app auto-seeds on first boot.'"
+  "containerEnv": {
+    "ENV": "development",
+    "LOG_FORMAT": "text",
+    "ADMIN_EMAIL": "admin@example.com",
+    "ADMIN_PASSWORD": "codespace-demo-1",
+    "SEED_DEMO_DATA": "1",
+    "ASR_PROVIDER": "mock"
+  },
+  "postCreateCommand": "pip install -e '.[dev]' && callinsights seed --demo",
+  "postStartCommand": "nohup callinsights serve > /tmp/callinsights.log 2>&1 &"
 }

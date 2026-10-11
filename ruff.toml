@@ -1,8 +1,17 @@
-# B008 (function call in argument defaults) is a false positive for FastAPI's
-# Depends() dependency-injection pattern: FastAPI inspects the default value at
-# route-registration time and never calls it per-request. The files below are
-# FastAPI route/dependency modules, so B008 is ignored only for them.
-[per-file-ignores]
-"app/auth.py" = ["B008"]
-"app/core/deps.py" = ["B008"]
-"app/product.py" = ["B008"]
+target-version = "py311"
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "C4", "PT", "N"]
+ignore = [
+  # FastAPI's Depends()/File()/Form() in defaults is the framework's DI pattern.
+  "B008",
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S108", "S311", "E501"]
+"callinsights/migrations/**" = ["E501"]
+"callinsights/demo_data.py" = ["E501"]
+
+[lint.isort]
+known-first-party = ["callinsights"]

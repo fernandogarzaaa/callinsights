@@ -1,0 +1,118 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "callinsights"
+version = "1.0.0"
+description = "AI sales call monitoring: automatic scoring, coaching insights, and analytics for every conversation."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Fernando Garza", email = "fernandogarzaaa@gmail.com" }]
+keywords = ["sales", "call-analytics", "coaching", "llm", "whisper", "fastapi"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Framework :: FastAPI",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+# Direct runtime dependencies are pinned exactly for reproducible deployments.
+# requirements.lock adds hashes for every transitive dependency (used by the Docker image).
+dependencies = [
+  "fastapi==0.142.2",
+  "uvicorn[standard]==0.54.0",
+  "sqlalchemy==2.1.3",
+  "alembic==1.20.0",
+  "pydantic==2.12.4",
+  "pydantic-settings==2.11.0",
+  "pyjwt==2.15.1",
+  "bcrypt==5.0.0",
+  "jinja2==3.1.6",
+  "python-multipart==0.0.32",
+  "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]==3.3.6"]
+asr = ["faster-whisper==1.2.1"]
+dev = [
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.10",
+  "mypy==2.4.0",
+  "testteeth==0.2.0",
+  "build==1.3.0",
+]
+
+[project.scripts]
+callinsights = "callinsights.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/fernandogarzaaa/callinsights"
+Issues = "https://github.com/fernandogarzaaa/callinsights/issues"
+Changelog = "https://github.com/fernandogarzaaa/callinsights/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["callinsights"]
+exclude = ["callinsights/static/src"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "callinsights",
+  "tests",
+  "README.md",
+  "CHANGELOG.md",
+  "LICENSE",
+  "SECURITY.md",
+  ".env.example",
+  "alembic.ini",
+  "requirements.lock",
+  "tailwind.config.js",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "integration: exercises the HTTP app and database end to end",
+]
+
+[tool.coverage.run]
+source = ["callinsights"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["callinsights"]
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["faster_whisper", "faster_whisper.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["callinsights.migrations.*"]
+disallow_untyped_defs = false
+
+[tool.testteeth]
+paths = [
+  "callinsights/scoring.py",
+  "callinsights/ai/llm.py",
+  "callinsights/ai/asr.py",
+  "callinsights/ai/diarize.py",
+  "callinsights/ratelimit.py",
+  "callinsights/security.py",
+]

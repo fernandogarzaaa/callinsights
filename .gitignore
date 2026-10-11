@@ -14,3 +14,14 @@ data/*.db
 .env
 .env.*
 !.env.example
+
+# Build artifacts
+dist/
+build/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.testteeth/
+.testteeth*
+data/
