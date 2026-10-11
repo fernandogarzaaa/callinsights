@@ -1,6 +1,6 @@
-"""Unit tests for app/scoring.py (pure, deterministic)."""
+"""Unit tests for callinsights/scoring.py (pure, deterministic)."""
 
-from app import scoring
+from callinsights import scoring
 
 
 def _turns(*pairs):
