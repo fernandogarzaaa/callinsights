@@ -80,6 +80,10 @@ include = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+filterwarnings = [
+  "ignore:Using `httpx` with `starlette.testclient`:DeprecationWarning",
+  "ignore::jwt.warnings.InsecureKeyLengthWarning",
+]
 markers = [
   "integration: exercises the HTTP app and database end to end",
 ]
