@@ -30,9 +30,11 @@ def audio(tmp_path: Path) -> Path:
 
 
 def test_mock_segments_timing() -> None:
-    segs = mock_segments(("one two three four five", "hi"))
-    # 5 words * 0.4 = 2.0s; "hi" -> minimum 1.5s; 1s pause between.
-    assert segs == [Segment(0.0, 2.0, "one two three four five"), Segment(3.0, 4.5, "hi")]
+    segs = mock_segments(("one two three four five", "hi", "a b c d"))
+    # 5 words * 0.4 = 2.0s; "hi" -> minimum 1.5s; 4 words = 1.6s; 1s pause between.
+    assert segs[:2] == [Segment(0.0, 2.0, "one two three four five"), Segment(3.0, 4.5, "hi")]
+    assert segs[2].start == 5.5
+    assert segs[2].end == pytest.approx(7.1)
 
 
 def test_mock_transcriber_is_deterministic_and_content_based(tmp_path: Path) -> None:
@@ -161,6 +163,13 @@ def test_openai_transcriber_no_key_no_language(audio: Path) -> None:
     assert "authorization" not in seen[0].headers
     assert 'name="language"' not in seen[0].content.decode("latin-1")
     assert t.model == "whisper-1"
+
+
+def test_openai_transcriber_default_timeout() -> None:
+    t = OpenAITranscriber("https://asr.example/v1", "k")
+    assert t._client.timeout.read == 600.0
+    t2 = OpenAITranscriber("https://asr.example/v1", "k", timeout=30.0)
+    assert t2._client.timeout.read == 30.0
 
 
 def test_openai_transcriber_requires_url() -> None:

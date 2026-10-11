@@ -46,6 +46,19 @@ def test_hash_and_verify_roundtrip() -> None:
 
 def test_hash_uses_requested_rounds() -> None:
     assert security.hash_password("pw-123456789", rounds=5).startswith("$2b$05$")
+    assert security.hash_password("pw-123456789").startswith("$2b$12$")  # default cost
+
+
+def test_dummy_hash_is_cheap_and_valid() -> None:
+    assert security._DUMMY_HASH.startswith("$2b$04$")
+    assert security.verify_password("anything", security._DUMMY_HASH) is False
+
+
+def test_dummy_verify_runs_a_real_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(security, "verify_password", lambda p, h: calls.append((p, h)) or False)
+    security.dummy_verify("pw")
+    assert calls == [("pw", security._DUMMY_HASH)]
 
 
 def test_verify_rejects_malformed_hash() -> None:
@@ -112,7 +125,7 @@ def test_garbage_token_is_rejected() -> None:
 def test_generate_api_key() -> None:
     raw, prefix, digest = security.generate_api_key()
     assert raw.startswith("ci_")
-    assert len(raw) > 40
+    assert len(raw) == 3 + 43  # 32 random bytes, urlsafe base64
     assert prefix == raw[:10]
     assert len(prefix) == 10
     assert digest == security.hash_api_key(raw)

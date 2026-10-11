@@ -26,17 +26,20 @@ def heuristic_roles(
 ) -> list[Role]:
     roles: list[Role] = []
     current = first
-    for i, seg in enumerate(segments):
-        if i > 0 and seg.start - segments[i - 1].end >= gap_seconds:
+    prev_end: float | None = None
+    for seg in segments:
+        if prev_end is not None and seg.start - prev_end >= gap_seconds:
             current = other(current)
         roles.append(current)
+        prev_end = seg.end
     return roles
 
 
 def render_transcript(segments: Sequence[Segment], roles: Sequence[Role]) -> str:
-    """Merge consecutive segments by the same speaker into ``Speaker: text`` lines."""
-    if len(segments) != len(roles):
-        raise ValueError("segments and roles must have the same length")
+    """Merge consecutive segments by the same speaker into ``Speaker: text`` lines.
+
+    Raises ``ValueError`` when ``segments`` and ``roles`` differ in length.
+    """
     lines: list[tuple[Role, str]] = []
     for seg, role in zip(segments, roles, strict=True):
         text = seg.text.strip()

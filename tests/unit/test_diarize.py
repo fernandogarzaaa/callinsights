@@ -45,8 +45,10 @@ def test_render_merges_consecutive_and_skips_blank() -> None:
 
 
 def test_render_length_mismatch() -> None:
-    with pytest.raises(ValueError, match="same length"):
+    with pytest.raises(ValueError, match="zip"):
         render_transcript([seg(0, 1)], [])
+    with pytest.raises(ValueError, match="zip"):
+        render_transcript([seg(0, 1)], ["agent", "prospect"])
 
 
 def test_segments_to_transcript_prefers_llm_roles() -> None:
@@ -63,3 +65,16 @@ def test_segments_to_transcript_falls_back_on_bad_llm_roles() -> None:
     assert (text, method) == ("Prospect: a b", "heuristic")
     text, method = segments_to_transcript(segs)
     assert (text, method) == ("Agent: a\nProspect: b", "heuristic")
+
+
+def test_segments_to_transcript_default_gap_is_0_8_seconds() -> None:
+    close = [seg(0, 1, "a"), seg(1.7, 2, "b")]  # 0.7s pause: same speaker
+    assert segments_to_transcript(close)[0] == "Agent: a b"
+    apart = [seg(0, 1, "a"), seg(2.0, 3, "b")]  # 1.0s pause: speaker change
+    assert segments_to_transcript(apart)[0] == "Agent: a\nProspect: b"
+
+
+def test_heuristic_ignores_wraparound() -> None:
+    # A first segment must never be compared with the last one.
+    segs = [seg(5, 6, "a"), seg(6, 7, "b"), seg(7, -10, "c")]
+    assert heuristic_roles(segs, 1.0) == ["agent", "agent", "agent"]

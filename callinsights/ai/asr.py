@@ -75,7 +75,7 @@ def mock_segments(script: tuple[str, ...]) -> list[Segment]:
     t = 0.0
     for line in script:
         dur = max(MOCK_MIN_SEGMENT_SECONDS, len(line.split()) * MOCK_SECONDS_PER_WORD)
-        segments.append(Segment(start=round(t, 2), end=round(t + dur, 2), text=line))
+        segments.append(Segment(start=t, end=t + dur, text=line))
         t += dur + MOCK_PAUSE_SECONDS
     return segments
 

@@ -1,0 +1,49 @@
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: verify
+        run: |
+          ruff check .
+          mypy
+          python -m pytest -q
+      - name: check tag matches package version
+        run: |
+          VERSION=$(python -c "import callinsights; print(callinsights.__version__)")
+          test "v${VERSION}" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != v${VERSION}"; exit 1; }
+      - name: build sdist + wheel
+        run: python -m build
+      - name: release notes from CHANGELOG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" {grab=1; next}
+            grab && /^## \[/ {exit}
+            grab {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          test -s RELEASE_NOTES.md
+      - name: publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            gh release edit "$GITHUB_REF_NAME" --draft=false --notes-file RELEASE_NOTES.md
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --title "CallInsights ${GITHUB_REF_NAME}" --notes-file RELEASE_NOTES.md --verify-tag
+          fi
