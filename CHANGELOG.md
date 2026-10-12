@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-13
+
+### Fixed
+
+- Accessibility: every form control now has an accessible name. "New call" field labels
+  are associated with their inputs (`for`/`id`); the login, dashboard filters, transcript
+  editor and settings forms get `aria-label`s; form status messages are announced
+  (`role="status"`, `aria-live`) and login errors use `role="alert"`.
+- Login card no longer overflows on phones narrower than 384px.
+
 ## [1.0.0] - 2026-10-11
 
 First production release. The beta app was restructured into an installable, typed
