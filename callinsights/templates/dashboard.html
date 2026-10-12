@@ -16,16 +16,16 @@
 </div>
 
 <form method="get" action="/" class="flex flex-wrap items-center gap-2 mb-6">
-  <input type="search" name="q" value="{{ filters.q }}" placeholder="Search contacts, agents, transcripts" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white w-72">
-  <select name="agent" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
+  <input type="search" name="q" aria-label="Search calls" value="{{ filters.q }}" placeholder="Search contacts, agents, transcripts" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white w-72">
+  <select name="agent" aria-label="Filter by agent" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
     <option value="">All agents</option>
     {% for a in agents %}<option value="{{ a }}" {% if a == filters.agent %}selected{% endif %}>{{ a }}</option>{% endfor %}
   </select>
-  <select name="outcome" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
+  <select name="outcome" aria-label="Filter by outcome" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
     <option value="">All outcomes</option>
     {% for o in ['Interested', 'Follow Up', 'Not Interested'] %}<option value="{{ o }}" {% if o == filters.outcome %}selected{% endif %}>{{ o }}</option>{% endfor %}
   </select>
-  <select name="days" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
+  <select name="days" aria-label="Filter by date range" class="text-sm border border-stone-300 rounded-md px-3 py-2 bg-white">
     <option value="">All time</option>
     {% for d in [7, 30, 90, 365] %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>Last {{ d }} days</option>{% endfor %}
   </select>
