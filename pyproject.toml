@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "callinsights"
-version = "1.0.0"
+version = "1.0.1"
 description = "AI sales call monitoring: automatic scoring, coaching insights, and analytics for every conversation."
 readme = "README.md"
 license = "MIT"

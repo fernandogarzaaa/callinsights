@@ -143,10 +143,10 @@
     <h2 class="text-sm font-semibold mb-1">Edit transcript</h2>
     <p class="text-xs text-stone-500 mb-4">Correct speaker labels or wording, then save to re-score the call.{% if call.transcript_source.startswith('asr') %} This transcript was produced by speech-to-text; speaker labels may need review.{% endif %}</p>
     <form id="edit-form" class="space-y-3">
-      <textarea name="transcript_text" rows="14" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2 font-mono">{{ call.transcript }}</textarea>
+      <textarea name="transcript_text" aria-label="Transcript" rows="14" class="w-full text-sm border border-stone-300 rounded-md px-3 py-2 font-mono">{{ call.transcript }}</textarea>
       <div class="flex items-center gap-3">
         <button class="text-sm bg-orange-600 text-white px-5 py-2 rounded-md hover:bg-orange-700">Save &amp; re-score</button>
-        <span id="edit-status" class="text-sm text-stone-500"></span>
+        <span id="edit-status" role="status" aria-live="polite" class="text-sm text-stone-500"></span>
       </div>
     </form>
   </div>
