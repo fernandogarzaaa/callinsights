@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ---- build: produce a wheel from the source tree -------------------------------------------
-FROM python:3.12-slim AS build
+FROM python:3.14-slim AS build
 WORKDIR /src
 RUN pip install --no-cache-dir build==1.3.0
 COPY pyproject.toml README.md LICENSE ./
@@ -8,7 +8,7 @@ COPY callinsights ./callinsights
 RUN python -m build --wheel --outdir /dist
 
 # ---- runtime ---------------------------------------------------------------------------------
-FROM python:3.12-slim
+FROM python:3.14-slim
 # "postgres" (default) or "postgres,asr" to bundle local faster-whisper + ffmpeg.
 ARG EXTRAS="postgres"
 ENV PYTHONDONTWRITEBYTECODE=1 \
