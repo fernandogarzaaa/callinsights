@@ -56,7 +56,7 @@ jobs:
           testteeth run
           --pytest-args "tests/unit -q -p no:cacheprovider -o addopts="
           --workers 4 --fail-under 85 --json mutation.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mutation-report
